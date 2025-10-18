@@ -1,56 +1,10 @@
--- PostgreSQL schema for Solar Energy Project Management
--- This schema is normalized and covers all major entities and relationships from the provided JSON
+-- PostgreSQL schema for Solar Energy Project JSON
 
 -- ORGANIZATION
 CREATE TABLE organization (
     id BIGINT PRIMARY KEY,
-    name TEXT NOT NULL,
-    country_iso2 CHAR(2),
-    country_name TEXT,
-    address TEXT
-);
-
--- USER ROLES (for assigned_role_data, assigned_designer_role_data, assigned_salesperson_role_data)
-CREATE TABLE user_role (
-    id BIGINT PRIMARY KEY,
-    email TEXT,
-    is_admin BOOLEAN,
-    user_url TEXT,
-    user_email TEXT,
-    org_id BIGINT REFERENCES organization(id),
-    is_hidden BOOLEAN,
-    url TEXT,
-    first_name TEXT,
-    family_name TEXT,
-    job_title TEXT,
-    accreditation TEXT,
-    user_phone TEXT,
-    display TEXT,
-    phone TEXT,
-    allow_email_notifications BOOLEAN,
-    portrait_image TEXT,
-    google_calendar_id TEXT,
-    has_logged_in BOOLEAN,
-    schedule_meeting_url TEXT,
-    schedule_meeting_label TEXT,
-    api_key_chat TEXT,
-    user_is_staff BOOLEAN,
-    org_name TEXT,
-    mosaic_sales_rep_id TEXT,
-    ironridge_email TEXT,
-    ironridge_terms_accepted BOOLEAN,
-    integration_json JSONB,
-    loanpal_channels TEXT,
-    sungage_email TEXT,
-    permissions_role INT,
-    permissions_role_title TEXT,
-    brighte_agent_id TEXT,
-    dividend_contact_id TEXT,
-    user_data JSONB,
-    phoenix_user_email TEXT,
-    managed_by TEXT,
-    portrait_image_public_url TEXT,
-    non_admin_editable BOOLEAN
+    name TEXT,
+    url TEXT
 );
 
 -- CONTACTS
@@ -82,63 +36,52 @@ CREATE TABLE project (
     identifier UUID,
     title TEXT,
     address TEXT,
+    notes TEXT,
+    is_residential BOOLEAN,
+    is_pricing_locked BOOLEAN,
+    installation_date DATE,
+    language TEXT,
+    lat NUMERIC,
+    lon NUMERIC,
     locality TEXT,
     state TEXT,
     zip TEXT,
-    country_iso2 CHAR(2),
-    lat NUMERIC,
-    lon NUMERIC,
+    country_iso2 TEXT,
+    country_name TEXT,
     org_id BIGINT REFERENCES organization(id),
-    org_name TEXT,
-    created_date TIMESTAMP WITH TIME ZONE,
-    modified_date TIMESTAMP WITH TIME ZONE,
-    notes TEXT,
+    created_date TIMESTAMP,
+    modified_date TIMESTAMP,
     contract_date DATE,
-    installation_date DATE,
-    sold_date TIMESTAMP WITH TIME ZONE,
-    is_residential BOOLEAN,
-    is_pricing_locked BOOLEAN,
-    priority INT,
-    lead_source TEXT,
+    contract TEXT,
+    design TEXT,
     number_of_phases INT,
     number_of_wires INT,
     number_of_storeys INT,
     payment_option_sold TEXT,
     payment_option_sold_title TEXT,
+    priority INT,
     project_installed INT,
     project_sold INT,
-    project_stage INT,
-    stage_warning TEXT,
-    stage INT,
     roof_type_name TEXT,
     roof_type TEXT,
     simulate_first_year_only BOOLEAN,
+    site_notes TEXT,
+    sold_date TIMESTAMP,
+    stage INT,
     usage_annual_or_guess NUMERIC,
     usage NUMERIC,
-    timezone_offset NUMERIC,
-    valid_until_date DATE,
-    years_to_simulate INT,
-    wind_region TEXT,
-    has_cellular_coverage BOOLEAN,
     allow_email_notifications BOOLEAN,
-    brighte_role_connection_status TEXT,
-    auto_apply_max_simulate_years BOOLEAN,
     is_lite BOOLEAN,
-    custom_data JSONB,
-    shared_with JSONB,
-    workflow_id BIGINT,
-    active_stage_id BIGINT,
-    active_stage_title TEXT
+    custom_data JSONB
 );
 
 -- SYSTEMS
 CREATE TABLE system (
     id BIGINT PRIMARY KEY,
-    uuid UUID,
-    project_id BIGINT REFERENCES project(id),
-    org_id BIGINT REFERENCES organization(id),
+    url TEXT,
     name TEXT,
-    order_num INT,
+    uuid UUID,
+    "order" INT,
     system_lifetime INT,
     inverter_range TEXT,
     dc_optimizer_active BOOLEAN,
@@ -157,9 +100,13 @@ CREATE TABLE system (
     net_profit NUMERIC,
     module_quantity INT,
     co2_tons_lifetime NUMERIC,
+    project_id BIGINT REFERENCES project(id),
+    org_id BIGINT REFERENCES organization(id),
     pricing_scheme TEXT,
+    battery_scheme TEXT,
     output_annual_kwh NUMERIC,
     consumption_offset_percentage NUMERIC,
+    integration_json JSONB,
     commission NUMERIC,
     commission_override_manually NUMERIC,
     system_sold BOOLEAN
@@ -195,28 +142,6 @@ CREATE TABLE system_battery (
     quantity INT
 );
 
--- ACTIONS
-CREATE TABLE action (
-    id BIGINT PRIMARY KEY,
-    url TEXT,
-    org TEXT,
-    stage INT,
-    title TEXT,
-    order_num INT,
-    created_date TIMESTAMP WITH TIME ZONE,
-    modified_date TIMESTAMP WITH TIME ZONE,
-    share_with_orgs JSONB,
-    org_shared_time JSONB
-);
-
--- ACTION WORKFLOWS
-CREATE TABLE action_workflow (
-    id SERIAL PRIMARY KEY,
-    action_id BIGINT REFERENCES action(id),
-    workflow TEXT,
-    stage TEXT
-);
-
 -- EVENTS
 CREATE TABLE event (
     id BIGINT PRIMARY KEY,
@@ -224,14 +149,15 @@ CREATE TABLE event (
     project_id BIGINT REFERENCES project(id),
     duration INT,
     event_type_id INT,
-    action_id BIGINT REFERENCES action(id),
-    start TIMESTAMP WITH TIME ZONE,
-    end_time TIMESTAMP WITH TIME ZONE,
-    created_date TIMESTAMP WITH TIME ZONE,
-    modified_date TIMESTAMP WITH TIME ZONE,
+    action_id BIGINT,
+    start TIMESTAMP,
+    "end" TIMESTAMP,
+    created_date TIMESTAMP,
+    modified_date TIMESTAMP,
     who_display TEXT,
     who_email TEXT,
-    completion_date TIMESTAMP WITH TIME ZONE,
+    who_portrait_image_public_url TEXT,
+    completion_date TIMESTAMP,
     title TEXT,
     project_name TEXT,
     is_planned BOOLEAN,
@@ -244,21 +170,44 @@ CREATE TABLE event (
     event_icon INT
 );
 
--- EVENT TEAM MEMBERS (if needed)
-CREATE TABLE event_team_member (
-    event_id BIGINT REFERENCES event(id),
-    team_member_url TEXT
-);
-
--- FILE TAGS
-CREATE TABLE file_tag (
+-- ACTIONS
+CREATE TABLE action (
     id BIGINT PRIMARY KEY,
     url TEXT,
+    org TEXT,
+    stage INT,
     title TEXT,
-    type TEXT
+    "order" INT,
+    created_date TIMESTAMP,
+    modified_date TIMESTAMP,
+    share_with_orgs TEXT[],
+    org_shared_time TEXT[],
+    project_id BIGINT REFERENCES project(id)
 );
 
--- PRIVATE FILES
+-- ACTION WORKFLOWS
+CREATE TABLE action_workflow (
+    id SERIAL PRIMARY KEY,
+    action_id BIGINT REFERENCES action(id),
+    workflow TEXT,
+    stage TEXT
+);
+
+-- ACTION EVENTS
+CREATE TABLE action_event (
+    id SERIAL PRIMARY KEY,
+    action_id BIGINT REFERENCES action(id),
+    event_id BIGINT REFERENCES event(id)
+);
+
+-- PROJECT CONTACTS (many-to-many)
+CREATE TABLE project_contact (
+    project_id BIGINT REFERENCES project(id),
+    contact_id BIGINT REFERENCES contact(id),
+    PRIMARY KEY (project_id, contact_id)
+);
+
+-- PROJECT FILES
 CREATE TABLE private_file (
     id BIGINT PRIMARY KEY,
     url TEXT,
@@ -276,12 +225,20 @@ CREATE TABLE private_file (
     filesize BIGINT,
     file_contents TEXT,
     show_customer BOOLEAN,
-    created_date TIMESTAMP WITH TIME ZONE,
-    modified_date TIMESTAMP WITH TIME ZONE,
+    created_date TIMESTAMP,
+    modified_date TIMESTAMP,
     temporary BOOLEAN
 );
 
--- PRIVATE FILE TAGS (many-to-many)
+-- FILE TAGS
+CREATE TABLE file_tag (
+    id BIGINT PRIMARY KEY,
+    url TEXT,
+    title TEXT,
+    type TEXT
+);
+
+-- FILE <-> TAGS (many-to-many)
 CREATE TABLE private_file_tag (
     private_file_id BIGINT REFERENCES private_file(id),
     file_tag_id BIGINT REFERENCES file_tag(id),
@@ -300,7 +257,7 @@ CREATE TABLE transaction (
     system TEXT,
     payment_option TEXT,
     is_complete BOOLEAN,
-    transaction_datetime TIMESTAMP WITH TIME ZONE,
+    transaction_datetime TIMESTAMP,
     amount NUMERIC,
     tax_included NUMERIC,
     surcharge_amount NUMERIC,
@@ -313,9 +270,9 @@ CREATE TABLE transaction (
     transaction_type TEXT,
     prior_transaction_type TEXT,
     customer_name TEXT,
-    created_date TIMESTAMP WITH TIME ZONE,
-    modified_date TIMESTAMP WITH TIME ZONE,
-    credit_expiration_date TIMESTAMP WITH TIME ZONE
+    created_date TIMESTAMP,
+    modified_date TIMESTAMP,
+    credit_expiration_date TIMESTAMP
 );
 
 -- UTILITY TARIFFS
@@ -329,10 +286,27 @@ CREATE TABLE utility_tariff (
     sector INT,
     description TEXT,
     precision TEXT,
-    data JSONB
+    data JSONB,
+    org_id BIGINT,
+    ui_message_key TEXT,
+    eia_id TEXT
 );
 
--- PRICING SCHEME
+-- PREMIUM IMAGERY ACTIVATIONS
+CREATE TABLE premium_imagery_activation (
+    id BIGINT PRIMARY KEY,
+    org BIGINT REFERENCES organization(id),
+    product_id BIGINT,
+    lon NUMERIC,
+    lat NUMERIC,
+    is_cancelled BOOLEAN,
+    project_id BIGINT REFERENCES project(id),
+    period TEXT,
+    dates JSONB,
+    bounds JSONB
+);
+
+-- SYSTEM PRICING SCHEME
 CREATE TABLE pricing_scheme (
     id BIGINT PRIMARY KEY,
     url TEXT,
@@ -342,34 +316,47 @@ CREATE TABLE pricing_scheme (
     title TEXT,
     priority INT,
     configuration_json JSONB,
-    created_date TIMESTAMP WITH TIME ZONE,
-    modified_date TIMESTAMP WITH TIME ZONE,
-    auto_apply_enabled BOOLEAN
+    created_date TIMESTAMP,
+    modified_date TIMESTAMP,
+    auto_apply_enabled BOOLEAN,
+    auto_apply_only_specified_states TEXT[],
+    auto_apply_only_specified_zips TEXT[],
+    auto_apply_component_codes TEXT[],
+    auto_apply_min_system_size NUMERIC,
+    auto_apply_max_system_size NUMERIC,
+    auto_apply_min_battery_kwh NUMERIC,
+    auto_apply_max_battery_kwh NUMERIC,
+    auto_apply_battery_capacity_type INT,
+    auto_apply_sector INT,
+    share_with_orgs TEXT[],
+    org_shared_time TEXT[]
 );
 
--- SYSTEM <-> PRICING SCHEME (if needed)
+-- SYSTEM <-> PRICING SCHEME (many-to-one)
 ALTER TABLE system ADD COLUMN pricing_scheme_id BIGINT REFERENCES pricing_scheme(id);
 
--- SYSTEM OTHERS (for extensibility)
-CREATE TABLE system_other (
-    id SERIAL PRIMARY KEY,
-    system_id BIGINT REFERENCES system(id),
-    other_json JSONB
-);
+-- PROJECT <-> SYSTEMS (one-to-many)
+ALTER TABLE system ADD COLUMN project_id BIGINT REFERENCES project(id);
 
--- SYSTEMS <-> ACTIONS (if needed, for many-to-many)
-CREATE TABLE system_action (
-    system_id BIGINT REFERENCES system(id),
-    action_id BIGINT REFERENCES action(id),
-    PRIMARY KEY (system_id, action_id)
-);
+-- PROJECT <-> EVENTS (one-to-many)
+ALTER TABLE event ADD COLUMN project_id BIGINT REFERENCES project(id);
 
--- SYSTEMS <-> EVENTS (if needed, for many-to-many)
-CREATE TABLE system_event (
-    system_id BIGINT REFERENCES system(id),
-    event_id BIGINT REFERENCES event(id),
-    PRIMARY KEY (system_id, event_id)
-);
+-- PROJECT <-> ACTIONS (one-to-many)
+ALTER TABLE action ADD COLUMN project_id BIGINT REFERENCES project(id);
 
--- Add more tables as needed for configuration, costing, workflows, testimonials, tags, etc.
--- This schema is extensible and can be further normalized as per business needs.
+-- PROJECT <-> TRANSACTIONS (one-to-many)
+ALTER TABLE transaction ADD COLUMN project_id BIGINT REFERENCES project(id);
+
+-- PROJECT <-> PRIVATE FILES (one-to-many)
+ALTER TABLE private_file ADD COLUMN project_id BIGINT REFERENCES project(id);
+
+-- PROJECT <-> PREMIUM IMAGERY ACTIVATIONS (one-to-many)
+ALTER TABLE premium_imagery_activation ADD COLUMN project_id BIGINT REFERENCES project(id);
+
+-- SYSTEM <-> MODULES/INVERTERS/BATTERIES (one-to-many)
+ALTER TABLE system_module ADD COLUMN system_id BIGINT REFERENCES system(id);
+ALTER TABLE system_inverter ADD COLUMN system_id BIGINT REFERENCES system(id);
+ALTER TABLE system_battery ADD COLUMN system_id BIGINT REFERENCES system(id);
+
+-- Add more tables as needed for nested/complex objects (e.g., costing, configuration, available_customer_actions, etc.)
+-- For JSONB fields, store the full nested object for flexibility.

@@ -5,3 +5,5 @@ langchain-community
 langchain-openai
 pymongo
 chromadb
+jq
+faiss-cpu
